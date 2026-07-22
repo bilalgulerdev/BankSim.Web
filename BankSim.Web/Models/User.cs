@@ -15,6 +15,8 @@ namespace BankSim.Web.Models
         [Required, EmailAddress]
         public string Email { get; set; } = string.Empty;
 
+        public DateTime? DateOfBirth { get; set; }
+
         [Required]
         public string PasswordHash { get; set; } = string.Empty;
 
