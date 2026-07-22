@@ -1,0 +1,171 @@
+﻿@model BankSim.Web.ViewModels.ApplyLoanViewModel
+@{
+    ViewData["Title"] = "İhtiyaç Kredisi Başvurusu";
+    bool isBirthday = ViewBag.IsBirthday != null && ViewBag.IsBirthday == true;
+}
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8">
+        @if (isBirthday)
+        {
+            <div class="alert alert-success shadow-sm mb-4 border-0 rounded-4">
+                <h5 class="fw-bold mb-1">🎉 İyi ki Doğdun! Sana Özel Kredi Kampanyası!</h5>
+                <p class="mb-0 small">Bugün doğum günün olduğu için kredi faiz oranını standart <strong>%3.5 yerine %1'e</strong> indirdik! Ayrıca ödemelerine <strong>1 ay ertelemeli</strong> başlarsın.</p>
+            </div>
+        }
+
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body p-4">
+                <form id="loanForm" asp-controller="Loan" asp-action="Apply" method="post">
+                    <div asp-validation-summary="All" class="text-danger small mb-3 fw-bold"></div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-muted fs-5">Ne kadar krediye ihtiyacınız var?</label>
+                        <input asp-for="PrincipalAmount" id="amountInput" type="number" step="1000" min="1000" max="500000" class="form-control form-control-lg fw-bold" placeholder="Örn: 50000" style="font-size: 1.5rem;" required />
+                    </div>
+
+                    <input type="hidden" asp-for="TermMonths" id="selectedTerm" />
+                    <h5 class="fw-bold mt-5 mb-3" id="optionsTitle" style="display:none;">Ödeme Planınızı Seçin</h5>
+                    <div class="row g-3" id="paymentOptions"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modern Kredi Onay Modalı -->
+<div class="modal fade" id="loanConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom-0 pb-0 mt-3 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="bg-primary bg-opacity-10 text-primary p-2 rounded-circle">
+                        <i class="fs-4">📄</i>
+                    </div>
+                    <h5 class="modal-title fw-bold fs-4">İşlem Onayı</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4 px-4">
+                <p class="text-muted mb-4">Seçtiğiniz ödeme planı ile kredi başvurunuzu tamamlamak üzeresiniz. İşlemi onayladığınızda tutar anında vadesiz hesabınıza aktarılacaktır.</p>
+
+                <div class="bg-light p-3 rounded-4 mb-3 border">
+                    <!-- Vade Bilgisi -->
+                    <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                        <span class="text-muted fw-bold align-self-center">Seçilen Vade:</span>
+                        <span class="fw-bold text-dark" id="modalTerm"></span>
+                    </div>
+                    <!-- Aylık Taksit Tutarı (Üste Alındı) -->
+                    <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                        <span class="text-muted fw-bold align-self-center">Aylık Taksit:</span>
+                        <span class="fw-bold text-primary" id="modalMonthly"></span>
+                    </div>
+                    <!-- Hesaba Yatacak Ana Para (Alta Alındı) -->
+                    <div class="d-flex justify-content-between mt-2">
+                        <span class="text-muted fw-bold align-self-center">Hesaba Yatacak Olan Kredi:</span>
+                        <span class="fw-bold text-success fs-5" id="modalPrincipalAmount"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 pt-0 px-4 pb-4">
+                <button type="button" class="btn btn-light fw-bold px-4 py-2" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary fw-bold px-4 py-2 shadow-sm" id="btnConfirmLoan">Onayla ve Hesaba Aktar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const amountInput = document.getElementById("amountInput");
+        const paymentOptions = document.getElementById("paymentOptions");
+        const optionsTitle = document.getElementById("optionsTitle");
+        const form = document.getElementById("loanForm");
+        const selectedTerm = document.getElementById("selectedTerm");
+
+        const isBirthday = @(isBirthday ? "true" : "false");
+        const baseRate = isBirthday ? 0.01 : 0.035;
+        const termOptions = [3, 6, 12, 16, 24, 36];
+
+        amountInput.addEventListener("input", function () {
+            let amount = parseFloat(amountInput.value);
+            paymentOptions.innerHTML = "";
+
+            // --- SINIRLANDIRMA MANTIĞI ---
+            // Eğer girilen değer 500.000'den büyükse, zorla 500.000'e eşitle
+            if (amount > 500000) {
+                amount = 500000;
+                amountInput.value = 500000;
+            }
+
+            if (isNaN(amount) || amount < 1000) {
+                optionsTitle.style.display = "none";
+                return;
+            }
+
+            optionsTitle.style.display = "block";
+
+            termOptions.forEach(term => {
+                const mathPower = Math.pow(1 + baseRate, term);
+                const monthly = amount * (baseRate * mathPower) / (mathPower - 1);
+                const total = monthly * term;
+
+                const displayTerm = isBirthday ? (term + 1) : term;
+                const badgeText = isBirthday ? `<span class="badge bg-warning text-dark mb-2">1 Ay Ertelemeli</span>` : "";
+
+                const cardHtml = `
+                    <div class="col-md-6">
+                        <div class="card border-primary h-100 option-card" style="cursor:pointer; transition: 0.3s;" data-term="${term}">
+                            <div class="card-body text-center">
+                                ${badgeText}
+                                <h4 class="fw-bold text-primary mb-0">${term} Taksit</h4>
+                                ${isBirthday ? `<small class="text-muted">Toplam Vade: ${displayTerm} Ay</small>` : ""}
+                                <hr>
+                                <p class="mb-1 text-muted small">Aylık Taksit Tutarı</p>
+                                <h5 class="fw-bold">${monthly.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL</h5>
+                                <p class="mb-0 mt-3 text-muted" style="font-size:0.8rem;">Toplam Geri Ödeme: ${total.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} TL</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                paymentOptions.insertAdjacentHTML('beforeend', cardHtml);
+            });
+
+            // Kartlara event atama kısmı
+            document.querySelectorAll(".option-card").forEach(card => {
+                card.addEventListener("mouseenter", function() { this.classList.add("bg-light"); });
+                card.addEventListener("mouseleave", function() { this.classList.remove("bg-light"); });
+
+                card.addEventListener("click", function () {
+                    const term = this.getAttribute("data-term");
+                    selectedTerm.value = term;
+
+                    // Vade metnini oluşturuyoruz
+                    const termText = isBirthday ? (parseInt(term) + 1) + " Ay (1 Ay Ertelemeli)" : term + " Ay";
+
+                    // Taksit miktarını kartın içindeki <h5> etiketinden okuyoruz
+                    const monthlyText = this.querySelector("h5").innerText;
+
+                    // Ana parayı çekip formatlıyoruz
+                    const currentAmount = parseFloat(amountInput.value);
+                    const formattedAmount = currentAmount.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " TL";
+
+                    // Verileri Popup (Modal) içindeki yerlerine yerleştiriyoruz
+                    document.getElementById("modalTerm").innerText = termText;
+                    document.getElementById("modalPrincipalAmount").innerText = formattedAmount;
+                    document.getElementById("modalMonthly").innerText = monthlyText;
+
+                    var confirmModal = new bootstrap.Modal(document.getElementById('loanConfirmModal'));
+                    confirmModal.show();
+                });
+            });
+        });
+
+        // Modal Onay Butonu Event'i
+        document.getElementById("btnConfirmLoan").addEventListener("click", function() {
+            this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> İşleniyor...';
+            this.disabled = true;
+            form.submit();
+        });
+    });
+</script>

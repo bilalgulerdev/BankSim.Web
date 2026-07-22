@@ -15,6 +15,10 @@ namespace BankSim.Web.Models
         [Required, EmailAddress]
         public string Email { get; set; } = string.Empty;
 
+
+        // ... diğer özellikler ...
+
+        [Column(TypeName = "date")]
         public DateTime? DateOfBirth { get; set; }
 
         [Required]

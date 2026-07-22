@@ -1,0 +1,39 @@
+﻿@model BankSim.Web.ViewModels.LoginViewModel
+@{
+    ViewData["Title"] = "Giriş Yap";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">Sisteme Giriş Yap</h4>
+            </div>
+            <div class="card-body">
+
+                <!-- Hata mesajlarını göstermek için özet alanı -->
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                <form asp-controller="Auth" asp-action="Login" method="post">
+
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label">E-posta Adresi</label>
+                        <input asp-for="Email" class="form-control" placeholder="ornek@mail.com" />
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Password" class="form-label">Şifre</label>
+                        <input asp-for="Password" class="form-control" type="password" placeholder="Şifrenizi giriniz" />
+                        <span asp-validation-for="Password" class="text-danger"></span>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success">Giriş Yap</button>
+                        <a asp-controller="Auth" asp-action="Register" class="btn btn-outline-secondary">Hesabın yok mu? Kayıt Ol</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

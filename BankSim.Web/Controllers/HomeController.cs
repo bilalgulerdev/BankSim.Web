@@ -1,32 +1,67 @@
-using System.Diagnostics;
-using BankSim.Web.Models;
+using BankSim.Web.Data;
+using BankSim.Web.ViewModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace BankSim.Web.Controllers
 {
+    [Authorize] // Sadece giriþ yapmýþ kullanýcýlar eriþebilir
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
+        private readonly AppDbContext _context;
 
-        public HomeController(ILogger<HomeController> logger)
+        public HomeController(AppDbContext context)
         {
-            _logger = logger;
+            _context = context;
         }
 
         public IActionResult Index()
         {
-            return View();
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdString) || !int.TryParse(userIdString, out int userId))
+            {
+                return RedirectToAction("Logout", "Auth");
+            }
+
+            var user = _context.Users.FirstOrDefault(u => u.Id == userId);
+            if (user == null) return RedirectToAction("Logout", "Auth");
+
+            var recentTransactions = _context.Transactions
+                .Include(t => t.SenderUser)
+                .Include(t => t.ReceiverUser)
+                .Where(t => t.SenderUserId == userId || t.ReceiverUserId == userId)
+                .OrderByDescending(t => t.TransactionDate)
+                .Take(5)
+                .ToList();
+
+            var model = new DashboardViewModel
+            {
+                FullName = user.FullName,
+                Iban = user.Iban,
+                Balance = user.Balance,
+                RecentTransactions = recentTransactions
+            };
+
+            // Doðum tarihi veritabanýnda yoksa arayüze (View) bildiriyoruz
+            ViewBag.NeedsBirthday = user.DateOfBirth == null;
+
+            return View(model);
         }
 
-        public IActionResult Privacy()
+        [HttpPost]
+        public IActionResult SaveBirthday(DateTime DateOfBirth)
         {
-            return View();
-        }
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = _context.Users.FirstOrDefault(u => u.Id == int.Parse(userIdStr!));
 
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            if (user != null)
+            {
+                user.DateOfBirth = DateOfBirth;
+                _context.SaveChanges();
+            }
+            return RedirectToAction("Index");
         }
     }
 }

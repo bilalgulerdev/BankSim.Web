@@ -1,8 +1,237 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@using System.Security.Claims
+@model BankSim.Web.ViewModels.DashboardViewModel
+@{
+    ViewData["Title"] = "Ana Panel";
+    int currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="row mt-4">
+    <!-- Sol Sütun: Banka Kartı ve Bakiye Bilgisi -->
+    <div class="col-md-4 mb-4">
+        <div class="card text-white bg-primary shadow-sm rounded-4">
+            <div class="card-header border-0 pt-4 pb-0 bg-transparent">
+                <h6 class="text-uppercase tracking-wide opacity-75">Vadesiz Hesap</h6>
+            </div>
+            <div class="card-body pt-2 pb-4">
+                <h4 class="card-title mb-3">@Model.FullName</h4>
+                <p class="card-text mb-1 opacity-75" style="letter-spacing: 2px; font-size: 0.9rem;">
+                    @Model.Iban
+                </p>
+                <h2 class="display-6 mt-3 fw-bold">@Model.Balance.ToString("N2") TL</h2>
+            </div>
+        </div>
+
+        <div class="d-grid gap-2 mt-3">
+            <a asp-controller="Transaction" asp-action="Transfer" class="btn btn-success py-2 shadow-sm">Para Gönder (Havale / EFT)</a>
+            <a asp-controller="Card" asp-action="Index" class="btn btn-dark py-2 shadow-sm">Sanal Kartlarım</a>
+            <a asp-controller="Loan" asp-action="Apply" class="btn btn-primary py-2 shadow-sm">Kredi Başvurusu Yap</a>
+            <a asp-controller="Auth" asp-action="Logout" class="btn btn-outline-danger py-2 mt-2">Güvenli Çıkış</a>
+        </div>
+    </div>
+
+    <!-- Sağ Sütun: Son İşlemler Tablosu -->
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fw-bold">Son Hesap Hareketleri</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-muted">
+                            <tr>
+                                <th class="ps-4">Tarih</th>
+                                <th>Açıklama</th>
+                                <th class="text-end pe-4">Tutar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.RecentTransactions.Any())
+                            {
+                                @foreach (var item in Model.RecentTransactions)
+                                {
+                                    bool isIncoming = item.ReceiverUserId == currentUserId;
+                                    string colorClass = isIncoming ? "text-success" : "text-danger";
+                                    string sign = isIncoming ? "+" : "-";
+                                    string typeText = isIncoming ? "Gelen Transfer / Kredi" : "Giden Transfer / Ödeme";
+
+                                    <!-- data-raw-amount ile saf matematiğe uygun sayıyı JavaScript'e gönderiyoruz -->
+                                    <tr class="transaction-row" style="cursor: pointer;"
+                                        data-date="@item.TransactionDate.ToString("dd.MM.yyyy HH:mm")"
+                                        data-desc="@item.Description"
+                                        data-amount="@item.Amount.ToString("N2") TL"
+                                        data-raw-amount="@item.Amount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"
+                                        data-type="@typeText"
+                                        data-color="@colorClass"
+                                        data-sign="@sign">
+
+                                        <td class="text-muted small ps-4">@item.TransactionDate.ToString("dd.MM.yyyy HH:mm")</td>
+                                        <td>@item.Description</td>
+                                        <td class="text-end fw-bold @colorClass pe-4">
+                                            @sign @item.Amount.ToString("N2") TL
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4">
+                                        Henüz bir hesap hareketiniz bulunmuyor.
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- İŞLEM DETAY MODALI (Popup) -->
+<div class="modal fade" id="transactionDetailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header border-bottom-0 pb-0 mt-3 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="bg-primary bg-opacity-10 text-primary p-2 rounded-circle">
+                        <i class="fs-4">🔍</i>
+                    </div>
+                    <h5 class="modal-title fw-bold fs-4">İşlem Detayı</h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4 px-4">
+                <div class="bg-light p-3 rounded-4 mb-3 border">
+                    <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                        <span class="text-muted fw-bold align-self-center">İşlem Tarihi:</span>
+                        <span class="fw-bold text-dark" id="detailDate"></span>
+                    </div>
+                    <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                        <span class="text-muted fw-bold align-self-center">İşlem Tipi:</span>
+                        <span class="fw-bold text-dark" id="detailType"></span>
+                    </div>
+                    <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                        <span class="text-muted fw-bold align-self-center">Açıklama:</span>
+                        <span class="fw-bold text-dark text-end ms-3" id="detailDesc" style="word-break: break-word;"></span>
+                    </div>
+
+                    <!-- KREDİ BİLGİLERİ (Başlangıçta Gizli, Sadece Kredi İşleminde Açılır) -->
+                    <div id="loanDetailsWrapper" style="display: none;">
+                        <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                            <span class="text-muted fw-bold align-self-center">Aylık Taksit Tutarı:</span>
+                            <span class="fw-bold text-primary" id="detailMonthlyPayment"></span>
+                        </div>
+                        <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                            <span class="text-muted fw-bold align-self-center">Kalan Taksit:</span>
+                            <span class="fw-bold text-dark" id="detailRemainingTerms"></span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-2">
+                        <span class="text-muted fw-bold align-self-center">İşlem Tutarı:</span>
+                        <span class="fw-bold fs-5" id="detailAmount"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 pt-0 px-4 pb-4">
+                <button type="button" class="btn btn-primary w-100 fw-bold py-2 shadow-sm" data-bs-dismiss="modal">Kapat</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (ViewBag.NeedsBirthday == true)
+{
+    <div class="modal fade" id="birthdayModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title">Lütfen Doğum Tarihinizi Giriniz</h5>
+                </div>
+                <form asp-controller="Home" asp-action="SaveBirthday" method="post">
+                    <div class="modal-body">
+                        <p class="text-muted small">Size özel finansal kampanyalar sunabilmemiz ve yasal doğrulama süreçleri için doğum tarihinize ihtiyacımız var.</p>
+                        <input type="date" name="DateOfBirth" class="form-control form-control-lg" required />
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-primary w-100">Kaydet ve Devam Et</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var myModal = new bootstrap.Modal(document.getElementById('birthdayModal'));
+            myModal.show();
+        });
+    </script>
+}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const transactionRows = document.querySelectorAll('.transaction-row');
+
+        if(transactionRows.length > 0) {
+            const detailModal = new bootstrap.Modal(document.getElementById('transactionDetailModal'));
+
+            transactionRows.forEach(row => {
+                row.addEventListener('click', function () {
+                    const date = this.getAttribute('data-date');
+                    const desc = this.getAttribute('data-desc');
+                    const amountText = this.getAttribute('data-amount');
+                    const rawAmount = parseFloat(this.getAttribute('data-raw-amount'));
+                    const type = this.getAttribute('data-type');
+                    const colorClass = this.getAttribute('data-color');
+                    const sign = this.getAttribute('data-sign');
+
+                    document.getElementById('detailDate').innerText = date;
+                    document.getElementById('detailType').innerText = type;
+                    document.getElementById('detailDesc').innerText = desc;
+
+                    const amountElement = document.getElementById('detailAmount');
+                    amountElement.innerText = sign + " " + amountText;
+                    amountElement.className = "fw-bold fs-5 " + colorClass;
+
+                    // --- KREDİ ANALİZİ (REGEX İLE) ---
+                    const loanWrapper = document.getElementById('loanDetailsWrapper');
+                    const descLower = desc.toLowerCase();
+
+                    // Eğer işlem açıklaması 'kredi' ve 'taksit' kelimelerini içeriyorsa
+                    if (descLower.includes('kredi') && descLower.includes('taksit')) {
+
+                        // Metinden "%1" veya "%3.5" formatındaki faizi yakala
+                        const rateMatch = desc.match(/%([\d.,]+)\s*Faiz/i);
+                        // Metinden "6 Taksitli" formatındaki sayıyı yakala
+                        const termMatch = desc.match(/(\d+)\s*Taksit/i);
+
+                        if (termMatch && rateMatch) {
+                            let rate = parseFloat(rateMatch[1].replace(',', '.')) / 100;
+                            let term = parseInt(termMatch[1]);
+
+                            // Amortisman Formülü (Aylık Taksit Hesaplama)
+                            let mathPower = Math.pow(1 + rate, term);
+                            let monthly = rawAmount * (rate * mathPower) / (mathPower - 1);
+
+                            document.getElementById('detailMonthlyPayment').innerText = monthly.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " TL";
+
+                            // Backend'de henüz taksit ödeme mekanizması olmadığından, şu anlık kalan taksit toplam taksite eşittir.
+                            document.getElementById('detailRemainingTerms').innerText = term + " Ay";
+
+                            loanWrapper.style.display = 'block'; // Kredi alanını göster
+                        } else {
+                            loanWrapper.style.display = 'none'; // Kredi ama parse edilemediyse gizle
+                        }
+                    } else {
+                        loanWrapper.style.display = 'none'; // Normal işlemse gizle
+                    }
+
+                    detailModal.show();
+                });
+            });
+        }
+    });
+</script>
