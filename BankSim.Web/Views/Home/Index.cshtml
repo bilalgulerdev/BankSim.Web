@@ -24,7 +24,9 @@
         <div class="d-grid gap-2 mt-3">
             <a asp-controller="Transaction" asp-action="Transfer" class="btn btn-success py-2 shadow-sm">Para Gönder (Havale / EFT)</a>
             <a asp-controller="Card" asp-action="Index" class="btn btn-dark py-2 shadow-sm">Sanal Kartlarım</a>
+            <a asp-controller="StandingOrder" asp-action="Index" class="btn btn-outline-dark py-2 shadow-sm mt-2">Düzenli Ödemelerim</a>
             <a asp-controller="Loan" asp-action="Apply" class="btn btn-primary py-2 shadow-sm">Kredi Başvurusu Yap</a>
+            <a asp-controller="Exchange" asp-action="Index" class="btn btn-outline-primary py-2 shadow-sm mt-2">Döviz ve Altın</a>
             <a asp-controller="Auth" asp-action="Logout" class="btn btn-outline-danger py-2 mt-2">Güvenli Çıkış</a>
         </div>
     </div>
@@ -50,10 +52,26 @@
                             {
                                 @foreach (var item in Model.RecentTransactions)
                                 {
-                                    bool isIncoming = item.ReceiverUserId == currentUserId;
-                                    string colorClass = isIncoming ? "text-success" : "text-danger";
-                                    string sign = isIncoming ? "+" : "-";
-                                    string typeText = isIncoming ? "Gelen Transfer / Kredi" : "Giden Transfer / Ödeme";
+                                    // GÖNDEREN VE ALICI AYNI MI? (Döviz/Altın Al-Sat İşlemi)
+                                    bool isExchange = item.SenderUserId == item.ReceiverUserId;
+                                    bool isIncoming = !isExchange && item.ReceiverUserId == currentUserId;
+
+                                    string colorClass;
+                                    string sign;
+                                    string typeText;
+
+                                    if (isExchange)
+                                    {
+                                        colorClass = "text-primary"; // Mavi renk
+                                        sign = ""; // İşaret yok
+                                        typeText = "Döviz / Emtia İşlemi";
+                                    }
+                                    else
+                                    {
+                                        colorClass = isIncoming ? "text-success" : "text-danger";
+                                        sign = isIncoming ? "+" : "-";
+                                        typeText = isIncoming ? "Gelen Transfer / Kredi" : "Giden Transfer / Ödeme";
+                                    }
 
                                     <!-- data-raw-amount ile saf matematiğe uygun sayıyı JavaScript'e gönderiyoruz -->
                                     <tr class="transaction-row" style="cursor: pointer;"
@@ -68,7 +86,11 @@
                                         <td class="text-muted small ps-4">@item.TransactionDate.ToString("dd.MM.yyyy HH:mm")</td>
                                         <td>@item.Description</td>
                                         <td class="text-end fw-bold @colorClass pe-4">
-                                            @sign @item.Amount.ToString("N2") TL
+                                            @if (!string.IsNullOrEmpty(sign))
+                                            {
+                                                <span>@sign</span>
+                                            }
+                                            @item.Amount.ToString("N2") TL
                                         </td>
                                     </tr>
                                 }
@@ -193,40 +215,41 @@
                     document.getElementById('detailDesc').innerText = desc;
 
                     const amountElement = document.getElementById('detailAmount');
-                    amountElement.innerText = sign + " " + amountText;
+
+                    // Modal içinde de işareti (varsa) gösteriyoruz
+                    if(sign !== "") {
+                        amountElement.innerText = sign + " " + amountText;
+                    } else {
+                        amountElement.innerText = amountText;
+                    }
+
                     amountElement.className = "fw-bold fs-5 " + colorClass;
 
                     // --- KREDİ ANALİZİ (REGEX İLE) ---
                     const loanWrapper = document.getElementById('loanDetailsWrapper');
                     const descLower = desc.toLowerCase();
 
-                    // Eğer işlem açıklaması 'kredi' ve 'taksit' kelimelerini içeriyorsa
                     if (descLower.includes('kredi') && descLower.includes('taksit')) {
 
-                        // Metinden "%1" veya "%3.5" formatındaki faizi yakala
                         const rateMatch = desc.match(/%([\d.,]+)\s*Faiz/i);
-                        // Metinden "6 Taksitli" formatındaki sayıyı yakala
                         const termMatch = desc.match(/(\d+)\s*Taksit/i);
 
                         if (termMatch && rateMatch) {
                             let rate = parseFloat(rateMatch[1].replace(',', '.')) / 100;
                             let term = parseInt(termMatch[1]);
 
-                            // Amortisman Formülü (Aylık Taksit Hesaplama)
                             let mathPower = Math.pow(1 + rate, term);
                             let monthly = rawAmount * (rate * mathPower) / (mathPower - 1);
 
                             document.getElementById('detailMonthlyPayment').innerText = monthly.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " TL";
-
-                            // Backend'de henüz taksit ödeme mekanizması olmadığından, şu anlık kalan taksit toplam taksite eşittir.
                             document.getElementById('detailRemainingTerms').innerText = term + " Ay";
 
-                            loanWrapper.style.display = 'block'; // Kredi alanını göster
+                            loanWrapper.style.display = 'block';
                         } else {
-                            loanWrapper.style.display = 'none'; // Kredi ama parse edilemediyse gizle
+                            loanWrapper.style.display = 'none';
                         }
                     } else {
-                        loanWrapper.style.display = 'none'; // Normal işlemse gizle
+                        loanWrapper.style.display = 'none';
                     }
 
                     detailModal.show();

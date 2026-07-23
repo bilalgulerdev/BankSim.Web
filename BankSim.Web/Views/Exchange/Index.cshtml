@@ -1,0 +1,93 @@
+﻿@model List<BankSim.Web.ViewModels.ExchangeRateViewModel>
+@{
+    ViewData["Title"] = "Döviz ve Altın Kurları";
+}
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-10">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-header bg-white py-3 border-bottom-0">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-dark">
+                        <i class="fs-4 me-2">🌍</i> Canlı Piyasalar
+                    </h5>
+                    <small class="text-muted">Son Güncelleme: @DateTime.Now.ToString("dd.MM.yyyy HH:mm")</small>
+                </div>
+            </div>
+
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-muted">
+                            <tr>
+                                <th class="ps-4">Para Birimi / Emtia</th>
+                                <th class="text-end">Banka Alış (TL)<br><small class="text-muted fw-normal">(Senin Satışın)</small></th>
+                                <th class="text-end pe-4">Banka Satış (TL)<br><small class="text-muted fw-normal">(Senin Alışın)</small></th>
+                                <th class="text-center">Durum</th>
+                                <th class="text-center pe-4">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model != null && Model.Any())
+                            {
+                                @foreach (var rate in Model)
+                                {
+                                    <tr>
+                                        <td class="ps-4">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-light p-2 rounded text-center me-3" style="width: 45px;">
+                                                    <span class="fw-bold text-dark">@rate.CurrencyCode</span>
+                                                </div>
+                                                <span class="fw-semibold text-secondary">@rate.CurrencyName</span>
+                                            </div>
+                                        </td>
+                                        <td class="text-end fw-bold">@rate.BuyRate.ToString("N2") ₺</td>
+                                        <td class="text-end fw-bold">@rate.SellRate.ToString("N2") ₺</td>
+                                        <td class="text-center" style="width: 80px;">
+                                            @if (rate.Trend == "up")
+                                            {
+                                                <span class="text-success fw-bold fs-5">↑</span>
+                                            }
+                                            else if (rate.Trend == "down")
+                                            {
+                                                <span class="text-danger fw-bold fs-5">↓</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted fw-bold fs-5">-</span>
+                                            }
+                                        </td>
+                                        <td class="text-center pe-4">
+                                            <div class="btn-group shadow-sm">
+                                                <a asp-controller="Exchange" asp-action="Buy" asp-route-code="@rate.CurrencyCode" class="btn btn-sm btn-primary fw-bold px-3">
+                                                    Al
+                                                </a>
+                                                <a asp-controller="Exchange" asp-action="Sell" asp-route-code="@rate.CurrencyCode" class="btn btn-sm btn-danger fw-bold px-3">
+                                                    Sat
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <!-- colspan 4'ten 5'e çıkarıldı ki tablo yapısı bozulmasın -->
+                                    <td colspan="5" class="text-center text-muted py-5">
+                                        Piyasa verilerine şu an ulaşılamıyor. Lütfen daha sonra tekrar deneyiniz.
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-light mt-3 border rounded-3 shadow-sm text-muted small">
+            <i class="me-1">ℹ️</i>
+            Kurlarımız haftalık olarak pazar günleri uluslararası piyasa verilerinden güncellenmektedir. Tablodaki alış/satış tutarları bilgilendirme amaçlı olup, anlık işlemlerde banka makas aralıkları uygulanmaktadır.
+        </div>
+    </div>
+</div>

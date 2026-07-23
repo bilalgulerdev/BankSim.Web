@@ -1,0 +1,91 @@
+﻿@model BankSim.Web.ViewModels.ExchangeRateViewModel
+@{
+    ViewData["Title"] = $"{Model.CurrencyCode} Alış İşlemi";
+}
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6">
+
+        <!-- Hata ve Başarı Mesajları -->
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger shadow-sm border-0 rounded-4">
+                <i class="me-2">⚠️</i> @TempData["Error"]
+            </div>
+        }
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success shadow-sm border-0 rounded-4">
+                <i class="me-2">✅</i> @TempData["Success"]
+            </div>
+        }
+
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-header bg-white py-3 border-bottom-0 text-center">
+                <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-circle d-inline-block mb-2">
+                    <h3 class="mb-0 fw-bold">@Model.CurrencyCode</h3>
+                </div>
+                <h5 class="mb-0 fw-bold text-dark">@Model.CurrencyName Satın Al</h5>
+                <p class="text-muted small mt-1 mb-0">Anlık Banka Satış Kuru: <span class="fw-bold text-dark" id="currentRate">@Model.SellRate.ToString("N2", System.Globalization.CultureInfo.InvariantCulture)</span> TL</p>
+            </div>
+
+            <div class="card-body p-4 pt-2">
+                @if (ViewBag.MaxAffordable < 1)
+                {
+                    <div class="alert alert-warning text-center">
+                        <strong>Bakiye Yetersiz!</strong><br />
+                        Hesabınızdaki TL bakiyesi ile en az 1 @Model.CurrencyCode alamazsınız.
+                    </div>
+                    <a asp-action="Index" class="btn btn-secondary w-100">Geri Dön</a>
+                }
+                else
+                {
+                    <form asp-controller="Exchange" asp-action="Buy" method="post">
+                        <input type="hidden" name="code" value="@Model.CurrencyCode" />
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-muted small">Alınacak Miktar (@Model.CurrencyCode)</label>
+                            <div class="input-group input-group-lg">
+                                <!-- step="1" ondalıklı sayıyı engeller, max=MaxAffordable parasının yettiği kadarını kısıtlar -->
+                                <input type="number" step="1" min="1" max="@ViewBag.MaxAffordable" name="amount" id="amountInput" class="form-control bg-light border-0 shadow-none" placeholder="Maks: @ViewBag.MaxAffordable" required autocomplete="off" />
+                                <span class="input-group-text bg-light border-0 text-muted fw-bold">@Model.CurrencyCode</span>
+                            </div>
+                            <small class="text-success mt-1 d-block">Maksimum alabileceğiniz: @ViewBag.MaxAffordable @Model.CurrencyCode</small>
+                        </div>
+
+                        <div class="bg-light p-3 rounded-4 mb-4 border">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="text-muted fw-bold">Toplam Ödenecek Tutar:</span>
+                                <span class="fs-4 fw-bold text-danger" id="totalCostDisplay">0.00 TL</span>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm rounded-3 py-3">
+                            İşlemi Onayla ve Satın Al
+                        </button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ANLIK HESAPLAMA İÇİN JAVASCRIPT -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const amountInput = document.getElementById('amountInput');
+        const totalCostDisplay = document.getElementById('totalCostDisplay');
+        const currentRate = parseFloat(document.getElementById('currentRate').innerText.replace(',', ''));
+
+        amountInput.addEventListener('input', function () {
+            const amount = parseFloat(this.value);
+            if (!isNaN(amount) && amount > 0) {
+                const totalCost = amount * currentRate;
+                // Tutarı Türk Lirası formatında gösterir
+                totalCostDisplay.innerText = totalCost.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " TL";
+            } else {
+                totalCostDisplay.innerText = "0.00 TL";
+            }
+        });
+    });
+</script>

@@ -4,6 +4,7 @@ using BankSim.Web.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BankSim.Web.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260723114512_AddCurrencyAccounts")]
+    partial class AddCurrencyAccounts
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -94,48 +97,6 @@ namespace BankSim.Web.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Loans");
-                });
-
-            modelBuilder.Entity("BankSim.Web.Models.StandingOrder", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("ExecutionDay")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("LastExecutedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("ReceiverIban")
-                        .IsRequired()
-                        .HasMaxLength(26)
-                        .HasColumnType("nvarchar(26)");
-
-                    b.Property<int>("SenderUserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SenderUserId");
-
-                    b.ToTable("StandingOrders");
                 });
 
             modelBuilder.Entity("BankSim.Web.Models.Transaction", b =>
@@ -272,17 +233,6 @@ namespace BankSim.Web.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("BankSim.Web.Models.StandingOrder", b =>
-                {
-                    b.HasOne("BankSim.Web.Models.User", "SenderUser")
-                        .WithMany("StandingOrders")
-                        .HasForeignKey("SenderUserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("SenderUser");
-                });
-
             modelBuilder.Entity("BankSim.Web.Models.Transaction", b =>
                 {
                     b.HasOne("BankSim.Web.Models.User", "ReceiverUser")
@@ -322,8 +272,6 @@ namespace BankSim.Web.Migrations
                     b.Navigation("ReceivedTransactions");
 
                     b.Navigation("SentTransactions");
-
-                    b.Navigation("StandingOrders");
 
                     b.Navigation("VirtualCards");
                 });

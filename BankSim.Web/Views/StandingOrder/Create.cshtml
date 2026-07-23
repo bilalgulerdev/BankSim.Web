@@ -1,0 +1,49 @@
+﻿@model BankSim.Web.Models.StandingOrder
+@{
+    ViewData["Title"] = "Yeni Talimat";
+}
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6">
+
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger shadow-sm border-0 rounded-4"><i class="me-2">⚠️</i> @TempData["Error"]</div>
+        }
+
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-header bg-white py-3 border-bottom-0 text-center">
+                <h5 class="mb-0 fw-bold text-dark">Yeni Düzenli Ödeme Talimatı</h5>
+            </div>
+
+            <div class="card-body p-4 pt-2">
+                <form asp-action="Create" method="post">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">Alıcı IBAN</label>
+                        <input type="text" asp-for="ReceiverIban" class="form-control form-control-lg bg-light border-0 shadow-none" placeholder="TR..." required maxlength="26" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-muted small">Açıklama (Örn: Ev Kirası)</label>
+                        <input type="text" asp-for="Description" class="form-control form-control-lg bg-light border-0 shadow-none" required />
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-muted small">Her Ayın Kaçıncı Günü?</label>
+                            <input type="number" asp-for="ExecutionDay" class="form-control form-control-lg bg-light border-0 shadow-none" min="1" max="28" placeholder="1-28 arası" required />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-muted small">Tutar (TL)</label>
+                            <input type="number" asp-for="Amount" step="0.01" min="1" class="form-control form-control-lg bg-light border-0 shadow-none" placeholder="0.00" required />
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm rounded-3 py-3">Talimatı Kaydet</button>
+                    <a asp-action="Index" class="btn btn-light btn-lg w-100 fw-bold rounded-3 py-3 mt-2">İptal</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

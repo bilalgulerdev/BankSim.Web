@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Transactions;
 
 namespace BankSim.Web.Models
 {
@@ -14,7 +13,6 @@ namespace BankSim.Web.Models
 
         [Required, EmailAddress]
         public string Email { get; set; } = string.Empty;
-
 
         // ... diğer özellikler ...
 
@@ -36,5 +34,13 @@ namespace BankSim.Web.Models
         public ICollection<Transaction> SentTransactions { get; set; } = new List<Transaction>();
         public ICollection<Transaction> ReceivedTransactions { get; set; } = new List<Transaction>();
         public ICollection<VirtualCard> VirtualCards { get; set; } = new List<VirtualCard>();
+
+        // --- YENİ EKLENEN KREDİ İLİŞKİSİ ---
+        public ICollection<Loan> Loans { get; set; } = new List<Loan>();
+
+        // --- YENİ EKLENEN DÖVİZ HESAPLARI İLİŞKİSİ ---
+        public ICollection<CurrencyAccount> CurrencyAccounts { get; set; } = new List<CurrencyAccount>();
+        
+        public ICollection<StandingOrder> StandingOrders { get; set; } = new List<StandingOrder>();
     }
 }

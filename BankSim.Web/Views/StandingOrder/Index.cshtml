@@ -1,0 +1,73 @@
+﻿@model IEnumerable<BankSim.Web.Models.StandingOrder>
+@{
+    ViewData["Title"] = "Düzenli Ödemeler";
+}
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-10">
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success shadow-sm border-0 rounded-4"><i class="me-2">✅</i> @TempData["Success"]</div>
+        }
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold">Düzenli Ödemelerim</h4>
+            <a asp-action="Create" class="btn btn-primary shadow-sm fw-bold">+ Yeni Talimat Ekle</a>
+        </div>
+
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-muted">
+                            <tr>
+                                <th class="ps-4">Alıcı IBAN</th>
+                                <th>Açıklama</th>
+                                <th>Ödeme Günü</th>
+                                <th class="text-end">Tutar</th>
+                                <th class="text-end pe-4">İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model != null && Model.Any())
+                            {
+                                @foreach (var item in Model)
+                                {
+                                    // Controller'dan gelen sözlüğü okuyoruz
+                                    var receiverDict = ViewBag.ReceiverNames as Dictionary<string, string>;
+                                    // IBAN sistemde kayıtlıysa ismini al, değilse "Bilinmeyen Alıcı" yaz
+                                    string receiverName = (receiverDict != null && receiverDict.ContainsKey(item.ReceiverIban))
+                                    ? receiverDict[item.ReceiverIban]
+                                    : "Banka Dışı Alıcı";
+
+                                    <tr>
+                                        <td class="ps-4">
+                                            <span class="fw-bold text-dark">@receiverName</span><br />
+                                            <small class="text-muted">@item.ReceiverIban</small>
+                                        </td>
+                                        <td>@item.Description</td>
+                                        <td>Her ayın @item.ExecutionDay. gününde</td>
+                                        <td class="text-end fw-bold text-dark">@item.Amount.ToString("N2") TL</td>
+                                        <td class="text-end pe-4">
+                                            <form asp-action="Delete" method="post" onsubmit="return confirm('Bu talimatı iptal etmek istediğinize emin misiniz?');">
+                                                <input type="hidden" name="id" value="@item.Id" />
+                                                <button type="submit" class="btn btn-sm btn-outline-danger shadow-sm">İptal Et</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-5">Kayıtlı düzenli ödeme talimatınız bulunmuyor.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
